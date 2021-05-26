@@ -1,0 +1,51 @@
+initialize() {
+	initializeMutationRate(2e-7);
+	initializeMutationType("m1", 0.5, "f", 0.0); //neutral
+	
+	defineConstant("adaptsel", 0.1); 
+	initializeMutationType("m2", 0.5, "s", "return adaptsel;"); 
+
+	initializeGenomicElementType("g1", c(m1), c(1.0)); 
+	initializeGenomicElement(g1, 1, 100000); //100kb
+	initializeRecombinationRate(2.3e-7); //Sanchez(2014)
+}
+10000 late() {sim.readFromPopulationFile("/u/home/x/xinjunzh/epas1/cluster_script_mine/burnt-in10k_1529584022316.txt");}
+//10000 late() {sim.readFromPopulationFile("/Users/xinjunzhang/Desktop/abc_hoffman/cluster_script_mine/burnt-in10k_1529584022316.txt");}
+10001 { sim.addSubpopSplit("p2", 1000, p1); } //split off p2(humans) from p1 16000 generations ago
+10100 late() {p1.genomes.addNewDrawnMutation(m2, 50000);} //introduce 1 adaptive mutation at position 50,000 at time 15,000 generations ago
+
+11422:11600 late() { 
+muts = p3.genomes.mutationsOfType(m2); 
+if (size(muts) ==0) 
+{ 
+sim.readFromPopulationFile("/u/home/x/xinjunzh/epas1/cluster_script_mine/burnt-in10k_1529584022316.txt"); //sim.simulationFinished();
+setSeed(getSeed() + 1); 
+cat("RESTART \n"); 
+} 
+} 
+
+11350 { sim.addSubpopSplit("p3", 12, p2); } //split off p3(ancestral Eur-Asia) from Africans 2040 generations ago; start bottleneck with Nb1=1860 
+//11440 {p3.setSubpopulationSize(100);} //start of Asian bottleneck at 920 generations ago;  Nb2=1000 
+11360 {p3.setSubpopulationSize(700);} //end of Asia bottleneck after 100 generations
+
+11420 {p3.setMigrationRates(p1, 0.001);} //gene flow from p1(Den) to p3(Tib) (VARIABLE)
+11421 {p3.setMigrationRates(p1, 0.0);}
+
+11421:11521 late() {
+mut = sim.mutationsOfType(m2);
+mut.setSelectionCoeff(0.0);
+}
+
+11522:11600 late() {
+mut = sim.mutationsOfType(m2);
+mut.setSelectionCoeff(asFloat(adaptsel));
+}
+
+11600 late() { //sim.outputFull(); 
+sim.outputMutations(p3.genomes.mutationsOfType(m2));
+cat("Frequencies: "); 
+print(sim.mutationFrequencies(p3, sim.mutationsOfType(m2))); 
+p1.outputMSSample(2);
+p2.outputMSSample(176);
+p3.outputMSSample(296);
+}
